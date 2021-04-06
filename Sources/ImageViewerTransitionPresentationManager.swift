@@ -32,7 +32,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
 
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?)
         -> TimeInterval {
-            return 0.3
+        return isPresenting ? 0.3 : 0.15
     }
     
     func animateTransition(using transitionContext: UIViewControllerContextTransitioning) {
@@ -92,11 +92,11 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             image: sourceView.image)
         dummyImageView.contentMode = .scaleAspectFit
         transitionView.addSubview(dummyImageView)
-        
-        UIView.animate(withDuration: duration, animations: {
+
+        UIView.animate(withDuration: duration, delay: 0.0, usingSpringWithDamping: 0.85, initialSpringVelocity: 20, options: []) {
             dummyImageView.frame = UIScreen.main.bounds
             controller.view.alpha = 1.0
-        }) { finished in
+        } completion: { finished in
             transitionVC.targetView?.alpha = 1.0
             dummyImageView.removeFromSuperview()
             completed(finished)
@@ -115,6 +115,9 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
   
         let sourceView = transitionVC.sourceView
         let targetView = transitionVC.targetView
+        if sourceView == nil {
+            targetView?.alpha = 1.0
+        }
         
         let dummyImageView = createDummyImageView(
             frame: targetView?.frameRelativeToWindow() ?? UIScreen.main.bounds,
@@ -127,6 +130,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
             if let sourceView = sourceView {
                 // return to original position
                 dummyImageView.frame = sourceView.frameRelativeToWindow()
+                dummyImageView.layer.cornerRadius = 16.0
             } else {
                 // just disappear
                 dummyImageView.alpha = 0.0
