@@ -5,10 +5,12 @@ public protocol ImageDataSource:class {
     func imageItem(at index:Int) -> ImageItem
     
     func maskedCorners(at index:Int) -> CACornerMask
+    func sourceImageView(atIndex index: Int) -> UIImageView?
 }
 
 public extension ImageDataSource {
     func maskedCorners(at index:Int) -> CACornerMask { [] }
+    func sourceImageView(atIndex index: Int) -> UIImageView? { nil }
 }
 
 public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
@@ -154,6 +156,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         applyOptions()
         
         dataSource = self
+        delegate = self
 
         if let imageDatasource = imageDatasource {
             let initialVC:ImageViewerController = .init(
@@ -198,7 +201,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     }
 }
 
-extension ImageCarouselViewController:UIPageViewControllerDataSource {
+extension ImageCarouselViewController:UIPageViewControllerDataSource, UIPageViewControllerDelegate {
     public func pageViewController(
         _ pageViewController: UIPageViewController,
         viewControllerBefore viewController: UIViewController) -> UIViewController? {
@@ -227,5 +230,17 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource {
             index: newIndex,
             imageItem: imageDatasource.imageItem(at: newIndex),
             imageLoader: vc.imageLoader)
+    }
+
+    public func pageViewController(_ pageViewController: UIPageViewController, didFinishAnimating finished: Bool, previousViewControllers: [UIViewController], transitionCompleted completed: Bool) {
+        guard completed, let currentVC = pageViewController.viewControllers?.first as? ImageViewerController else { return }
+        
+        // Make previous source image view visible
+        initialSourceView?.alpha = 1.0
+        
+        // Update views and make new source image view hidden
+        initialSourceView = imageDatasource?.sourceImageView(atIndex: currentVC.index)
+        initialSourceView?.alpha = 0.0
+        initialIndex = currentVC.index
     }
 }
