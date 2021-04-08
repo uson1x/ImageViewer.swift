@@ -15,6 +15,13 @@ protocol ImageViewerTransitionViewControllerConvertible {
     
     // The final view
     var targetView: UIImageView? { get }
+
+    
+    func maskedCorners() -> CACornerMask
+}
+
+extension ImageViewerTransitionViewControllerConvertible {
+    func maskedCorners() -> CACornerMask { [] }
 }
 
 final class ImageViewerTransitionPresentationAnimator:NSObject {
@@ -122,6 +129,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
         let dummyImageView = createDummyImageView(
             frame: targetView?.frameRelativeToWindow() ?? UIScreen.main.bounds,
             image: targetView?.image)
+        dummyImageView.layer.maskedCorners = []
         transitionView.addSubview(dummyImageView)
         targetView?.isHidden = true
       
@@ -131,6 +139,7 @@ extension ImageViewerTransitionPresentationAnimator: UIViewControllerAnimatedTra
                 // return to original position
                 dummyImageView.frame = sourceView.frameRelativeToWindow()
                 dummyImageView.layer.cornerRadius = 16.0
+                dummyImageView.layer.maskedCorners = transitionVC.maskedCorners()
             } else {
                 // just disappear
                 dummyImageView.alpha = 0.0

@@ -3,6 +3,12 @@ import UIKit
 public protocol ImageDataSource:class {
     func numberOfImages() -> Int
     func imageItem(at index:Int) -> ImageItem
+    
+    func maskedCorners(at index:Int) -> CACornerMask
+}
+
+public extension ImageDataSource {
+    func maskedCorners(at index:Int) -> CACornerMask { [] }
 }
 
 public class ImageCarouselViewController:UIPageViewController, ImageViewerTransitionViewControllerConvertible {
@@ -20,6 +26,14 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
             return nil
         }
         return vc.imageView
+    }
+    
+    func maskedCorners() -> CACornerMask {
+        guard let vc = viewControllers?.first as? ImageViewerController, let imageDatasource = imageDatasource else {
+            return []
+        }
+        
+        return imageDatasource.maskedCorners(at: vc.index) 
     }
     
     weak var imageDatasource:ImageDataSource?
