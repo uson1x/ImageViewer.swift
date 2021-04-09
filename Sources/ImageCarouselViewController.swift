@@ -69,7 +69,16 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         return _v
     }()
     
-    private(set) lazy var navItem = UINavigationItem()
+    private(set) lazy var navItem:UINavigationItem = {
+        let item = UINavigationItem()
+        let label = UILabel()
+        label.font = UIFont.preferredFont(forTextStyle: .subheadline)
+        label.textAlignment = .center
+        label.numberOfLines = 2
+        label.adjustsFontSizeToFitWidth = true
+        item.titleView = label
+        return item
+    }()
     
     private let imageViewerPresentationDelegate = ImageViewerTransitionPresentationManager()
     
@@ -110,7 +119,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         navItem.leftBarButtonItem = closeBarButton
         navItem.leftBarButtonItem?.tintColor = theme.tintColor
-        navBar.alpha = 0.0
         navBar.items = [navItem]
         navBar.insert(to: view)
     }
@@ -164,6 +172,8 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                 imageItem: imageDatasource.imageItem(at: initialIndex),
                 imageLoader: imageLoader)
             setViewControllers([initialVC], direction: .forward, animated: true)
+            (navItem.titleView as? UILabel)?.text = initialVC.title
+            navItem.titleView?.sizeToFit()
         }
     }
 
@@ -242,5 +252,8 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource, UIPageView
         initialSourceView = imageDatasource?.sourceImageView(atIndex: currentVC.index)
         initialSourceView?.alpha = 0.0
         initialIndex = currentVC.index
+        
+        (navItem.titleView as? UILabel)?.text = currentVC.title
+        navItem.titleView?.sizeToFit()
     }
 }

@@ -22,7 +22,7 @@ extension UIImageView {
         from:UIViewController? = nil,
         imageLoader:ImageLoader? = nil) {
         setup(
-            datasource: SimpleImageDatasource(imageItems: [.image(image)]),
+            datasource: SimpleImageDatasource(imageItems: [.image(image, author: nil, date: nil)]),
             options: options,
             from: from,
             imageLoader: imageLoader)
@@ -38,7 +38,7 @@ extension UIImageView {
         
         let datasource = SimpleImageDatasource(
             imageItems: [url].compactMap {
-                ImageItem.url($0, placeholder: placeholder)
+                ImageItem.url($0, placeholder: placeholder, author: nil, date: nil)
         })
         setup(
             datasource: datasource,
@@ -57,7 +57,7 @@ extension UIImageView {
         
         let datasource = SimpleImageDatasource(
             imageItems: images.compactMap {
-                ImageItem.image($0)
+                ImageItem.image($0, author: nil, date: nil)
         })
         setup(
             datasource: datasource,
@@ -77,7 +77,7 @@ extension UIImageView {
         
         let datasource = SimpleImageDatasource(
             imageItems: urls.compactMap {
-                ImageItem.url($0, placeholder: placeholder)
+                ImageItem.url($0, placeholder: placeholder, author: nil, date: nil)
         })
         setup(
             datasource: datasource,

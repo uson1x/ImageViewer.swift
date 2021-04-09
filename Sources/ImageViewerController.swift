@@ -85,15 +85,17 @@ UIGestureRecognizerDelegate {
         super.viewDidLoad()
 
         switch imageItem {
-        case .image(let img):
+        case .image(let img, let author, let date):
             imageView.image = img
             imageView.layoutIfNeeded()
-        case .url(let url, let placeholder):
+            title = makeTitle(forAuthor: author, date: date)
+        case .url(let url, let placeholder, let author, let date):
             imageLoader.loadImage(url, placeholder: placeholder, imageView: imageView) { (image) in
                 DispatchQueue.main.async {[weak self] in
                     self?.layout()
                 }
             }
+            title = makeTitle(forAuthor: author, date: date)
         default:
             break
         }
@@ -101,14 +103,13 @@ UIGestureRecognizerDelegate {
         addGestureRecognizers()
     }
     
-    override func viewDidAppear(_ animated: Bool) {
-        super.viewDidAppear(animated)
-        self.navBar?.alpha = 1.0
-    }
-    
-    override func viewDidDisappear(_ animated: Bool) {
-        super.viewDidDisappear(animated)
-        self.navBar?.alpha = 0.0
+    private func makeTitle(forAuthor author: String?, date: Date?) -> String? {
+        var components = [author]
+        if let date = date {
+            let dateString = DateFormatter.localizedString(from: date, dateStyle: .short, timeStyle: .short)
+            components.append(dateString)
+        }
+        return components.compactMap { $0 }.joined(separator: "\n")
     }
     
     override func viewWillLayoutSubviews() {
