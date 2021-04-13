@@ -46,7 +46,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     var theme:ImageViewerTheme = .light {
         didSet {
             navItem.leftBarButtonItem?.tintColor = theme.tintColor
-            backgroundView?.backgroundColor = theme.color
+            backgroundView.backgroundColor = theme.color
         }
     }
     
@@ -56,16 +56,21 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     
     private(set) lazy var navBar:UINavigationBar = {
         let _navBar = UINavigationBar(frame: .zero)
-        _navBar.isTranslucent = true
-        _navBar.setBackgroundImage(UIImage(), for: .default)
-        _navBar.shadowImage = UIImage()
+        _navBar.isTranslucent = false
         return _navBar
     }()
     
-    private(set) lazy var backgroundView:UIView? = {
+    private(set) lazy var backgroundView:UIView = {
         let _v = UIView()
         _v.backgroundColor = theme.color
         _v.alpha = 1.0
+        return _v
+    }()
+    private(set) lazy var statusBarBackgroundView:UIView = {
+        let _v = UIView()
+        _v.backgroundColor = theme.color
+        _v.alpha = 1.0
+        _v.frame = view.convert(UIApplication.shared.statusBarFrame, from: nil).intersection(view.bounds)
         return _v
     }()
     
@@ -124,7 +129,6 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     }
     
     private func addBackgroundView() {
-        guard let backgroundView = backgroundView else { return }
         view.addSubview(backgroundView)
         backgroundView.bindFrameToSuperview()
         view.sendSubviewToBack(backgroundView)
@@ -143,14 +147,14 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
                         title: title,
                         style: .plain,
                         target: self,
-                        action: #selector(diTapRightNavBarItem(_:)))
+                        action: #selector(didTapRightNavBarItem(_:)))
                     onRightNavBarTapped = onTap
                 case .rightNavItemIcon(let icon, let onTap):
                     navItem.rightBarButtonItem = UIBarButtonItem(
                         image: icon,
                         style: .plain,
                         target: self,
-                        action: #selector(diTapRightNavBarItem(_:)))
+                        action: #selector(didTapRightNavBarItem(_:)))
                     onRightNavBarTapped = onTap
             }
         }
@@ -161,20 +165,74 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
         
         addBackgroundView()
         addNavBar()
+        view.addSubview(statusBarBackgroundView)
         applyOptions()
         
         dataSource = self
         delegate = self
 
         if let imageDatasource = imageDatasource {
-            let initialVC:ImageViewerController = .init(
-                index: initialIndex,
-                imageItem: imageDatasource.imageItem(at: initialIndex),
+            let initialVC = makeImageViewerController(
+                initialIndex: initialIndex, 
+                imageItem: imageDatasource.imageItem(at: initialIndex), 
                 imageLoader: imageLoader)
             setViewControllers([initialVC], direction: .forward, animated: true)
-            (navItem.titleView as? UILabel)?.text = initialVC.title
+            (navItem.titleView as? UILabel)?.attributedText = attributedText(forViewControllerTitle: initialVC.title)
             navItem.titleView?.sizeToFit()
         }
+    }
+    
+    private func makeImageViewerController(initialIndex: Int, imageItem: ImageItem, imageLoader: ImageLoader) -> ImageViewerController {
+        let initialVC:ImageViewerController = .init(
+            index: initialIndex,
+            imageItem: imageItem,
+            imageLoader: imageLoader)
+        initialVC.singleTapAction = { [weak self] in
+            guard let self = self else { return }
+            let currentNavAlpha = self.navBar.alpha ?? 0.0
+            let shouldHide = currentNavAlpha > 0.5
+            if self.navBar.isHidden && !shouldHide {
+                self.navBar.isHidden = false
+            }
+            UIView.animate(withDuration: 0.235) { 
+                self.statusBarBackgroundView.alpha = shouldHide ? 0.0 : 1.0 
+                self.navBar.alpha = shouldHide ? 0.0 : 1.0 
+                self.setNeedsStatusBarAppearanceUpdate()
+            } completion: { (finished) in
+                self.navBar.isHidden = shouldHide
+            }
+
+        }
+        initialVC.updateBackgroundViewsAlpha = { [weak self] alpha in
+            guard let self = self else { return }
+            self.backgroundView.alpha = alpha
+            if !self.navBar.isHidden { 
+                self.navBar.alpha = alpha
+            }
+        }
+        return initialVC
+    }
+    
+    private func attributedText(forViewControllerTitle title: String?) -> NSAttributedString? {
+        guard let title = title else { return nil }
+        let lines = title.components(separatedBy: .newlines)
+        let text = NSMutableAttributedString()
+        guard let firstOriginalLine = lines.first else { return nil }
+        let firstLineText = NSAttributedString(string: firstOriginalLine, attributes: 
+                                                [.font: UIFont.preferredFont(forTextStyle: .body)])
+        text.append(firstLineText)
+        let otherLines = Array(lines.dropFirst())
+        if !otherLines.isEmpty {
+            let otherLinesString = NSAttributedString(string: "\n".appending(otherLines.joined(separator: " ")), 
+                                                      attributes: [.font: UIFont.preferredFont(forTextStyle: .footnote),
+                                                             .foregroundColor: UIColor.darkGray])
+            text.append(otherLinesString)
+        }
+        return text
+    }
+    
+    public override var prefersStatusBarHidden: Bool {
+        navBar.alpha < 0.001
     }
 
     @objc
@@ -196,7 +254,7 @@ public class ImageCarouselViewController:UIPageViewController, ImageViewerTransi
     }
     
     @objc
-    func diTapRightNavBarItem(_ sender:UIBarButtonItem) {
+    func didTapRightNavBarItem(_ sender:UIBarButtonItem) {
         guard let onTap = onRightNavBarTapped,
             let _firstVC = viewControllers?.first as? ImageViewerController
             else { return }
@@ -221,9 +279,9 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource, UIPageView
         guard vc.index > 0 else { return nil }
  
         let newIndex = vc.index - 1
-        return ImageViewerController.init(
-            index: newIndex,
-            imageItem:  imageDatasource.imageItem(at: newIndex),
+        return makeImageViewerController(
+            initialIndex: newIndex, 
+            imageItem: imageDatasource.imageItem(at: newIndex), 
             imageLoader: vc.imageLoader)
     }
     
@@ -236,9 +294,9 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource, UIPageView
         guard vc.index <= (imageDatasource.numberOfImages() - 2) else { return nil }
         
         let newIndex = vc.index + 1
-        return ImageViewerController.init(
-            index: newIndex,
-            imageItem: imageDatasource.imageItem(at: newIndex),
+        return makeImageViewerController(
+            initialIndex: newIndex, 
+            imageItem: imageDatasource.imageItem(at: newIndex), 
             imageLoader: vc.imageLoader)
     }
 
@@ -253,7 +311,7 @@ extension ImageCarouselViewController:UIPageViewControllerDataSource, UIPageView
         initialSourceView?.alpha = 0.0
         initialIndex = currentVC.index
         
-        (navItem.titleView as? UILabel)?.text = currentVC.title
+        (navItem.titleView as? UILabel)?.attributedText = attributedText(forViewControllerTitle: currentVC.title)
         navItem.titleView?.sizeToFit()
     }
 }

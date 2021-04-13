@@ -14,13 +14,10 @@ UIGestureRecognizerDelegate {
     
     var index:Int = 0
     var imageItem:ImageItem!
-
-    var navBar:UINavigationBar? {
-        guard let _parent = parent as? ImageCarouselViewController
-            else { return nil}
-        return _parent.navBar
-    }
     
+    var singleTapAction: (() -> Void)?
+    var updateBackgroundViewsAlpha: ((_ alpha: CGFloat) -> Void)?
+
     // MARK: Layout Constraints
     private var top:NSLayoutConstraint!
     private var leading:NSLayoutConstraint!
@@ -173,7 +170,7 @@ UIGestureRecognizerDelegate {
         }
         
         let diffY = view.center.y - container.center.y
-        backgroundView?.alpha = 1.0 - abs(diffY/view.center.y)
+        updateBackgroundViewsAlpha?(1.0 - abs(diffY/view.center.y))
         if gestureRecognizer.state == .ended {
             if abs(diffY) > 60 {
                 dismiss(animated: true)
@@ -192,11 +189,7 @@ UIGestureRecognizerDelegate {
     
     @objc
     func didSingleTap(_ recognizer: UITapGestureRecognizer) {
-        
-        let currentNavAlpha = self.navBar?.alpha ?? 0.0
-        UIView.animate(withDuration: 0.235) {
-            self.navBar?.alpha = currentNavAlpha > 0.5 ? 0.0 : 1.0
-        }
+        singleTapAction?()
     }
     
     @objc
@@ -238,7 +231,7 @@ extension ImageViewerController {
         scrollView.minimumZoomScale = minScale
         scrollView.zoomScale = minScale
         maxZoomScale = maxScale
-        scrollView.maximumZoomScale = maxZoomScale * 1.1
+        scrollView.maximumZoomScale = maxZoomScale * 2
     }
     
     
@@ -277,7 +270,7 @@ extension ImageViewerController {
             withDuration: 0.237,
             animations: {
                 self.imageView.center = self.view.center
-                self.backgroundView?.alpha = 1.0
+                self.updateBackgroundViewsAlpha?(1.0)
         }) {[weak self] _ in
             self?.isAnimating = false
         }
